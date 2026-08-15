@@ -1,15 +1,1002 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-    <script type="module" crossorigin src="/assets/index-9vXkDqxV.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BtxtvkDH.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lvien · Personal Homepage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --parchment:#f3ead6;
+  --parchment-deep:#eaddc2;
+  --card:#f8f1e2;
+  --ink:#43331f;
+  --ink-soft:#6b5b44;
+  --brown:#6d4c2f;
+  --brown-deep:#54381f;
+  --red:#8e2f26;
+  --red-bright:#a83c2c;
+  --gray:#7c7568;
+  --gold:#a8823c;
+  --gold-bright:#c9a254;
+  --line:#c9b895;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Serif SC","Cormorant Garamond",serif;
+  color:var(--ink);
+  background:
+    radial-gradient(ellipse at 25% 8%, rgba(255,252,240,.7), transparent 55%),
+    radial-gradient(ellipse at 80% 95%, rgba(190,160,110,.16), transparent 50%),
+    var(--parchment);
+  min-height:100vh;
+  overflow-x:hidden;
+  cursor:none;
+}
+a,button{cursor:none}
+::selection{background:var(--red);color:#f8f1e2}
+
+/* ---------- WebGL 着色器背景 ---------- */
+#shader-bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.5}
+
+/* ---------- 页面过渡幕布 ---------- */
+#wipe{position:fixed;inset:0;z-index:300;pointer-events:none}
+.wipe-panel{
+  position:absolute;inset:-2% 0;transform:translateY(0);
+}
+.wipe-panel.p1{background:var(--red);z-index:2;transition:transform .62s cubic-bezier(.76,0,.24,1)}
+.wipe-panel.p2{background:var(--parchment-deep);z-index:1;transition:transform .62s cubic-bezier(.76,0,.24,1) .09s}
+.wipe-mark{
+  position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;
+  font-family:"Cormorant Garamond",serif;font-size:72px;color:#f3ead6;
+  opacity:1;transition:opacity .4s ease;z-index:4;
+}
+#wipe.leave .wipe-panel{transform:translateY(-102%)}
+#wipe.leave .wipe-mark{opacity:0}
+#wipe.gone{display:none}
+
+/* ---------- 颗粒噪点 ---------- */
+.grain{
+  position:fixed;inset:-50%;width:200%;height:200%;pointer-events:none;z-index:120;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  opacity:.055;
+  animation:grain 1.2s steps(4) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)}25%{transform:translate(-2%,1.5%)}
+  50%{transform:translate(1.5%,-2%)}75%{transform:translate(-1%,-1%)}100%{transform:translate(0,0)}
+}
+
+/* ---------- 自定义光标 ---------- */
+.cursor-dot,.cursor-ring{
+  position:fixed;top:0;left:0;pointer-events:none;z-index:200;
+  border-radius:50%;transform:translate(-50%,-50%);
+}
+.cursor-dot{width:8px;height:8px;background:var(--red)}
+.cursor-ring{
+  width:36px;height:36px;border:1.5px solid rgba(142,47,38,.55);
+  transition:width .25s,height .25s,border-color .25s,background .25s;
+}
+body.cursor-hover .cursor-ring{
+  width:58px;height:58px;border-color:var(--gold);
+  background:rgba(168,130,60,.10);
+}
+@media (hover:none){.cursor-dot,.cursor-ring{display:none}body,a,button{cursor:auto}}
+
+/* ---------- 余烬粒子画布 ---------- */
+#embers{position:fixed;inset:0;pointer-events:none;z-index:1}
+
+/* ---------- 顶部进度条 ---------- */
+.progress{
+  position:fixed;top:0;left:0;height:3px;width:100%;z-index:150;
+  background:linear-gradient(to right,var(--gold),var(--red));
+  transform-origin:0 50%;transform:scaleX(0);
+}
+
+/* ---------- 导航 ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 32px;
+  background:linear-gradient(to bottom, rgba(243,234,214,.92), rgba(243,234,214,0));
+  backdrop-filter:blur(2px);
+}
+nav .brand{font-weight:900;font-size:18px;letter-spacing:.12em;color:var(--brown-deep)}
+nav .brand em{color:var(--red);font-style:normal}
+nav .links{display:flex;gap:26px}
+nav .links a{
+  color:var(--ink-soft);text-decoration:none;font-size:14px;letter-spacing:.08em;
+  position:relative;padding:2px 0;
+}
+nav .links a::after{
+  content:"";position:absolute;left:0;bottom:-2px;width:100%;height:1px;
+  background:var(--red);transform:scaleX(0);transform-origin:100% 50%;
+  transition:transform .35s cubic-bezier(.22,1,.36,1);
+}
+nav .links a:hover{color:var(--red)}
+nav .links a:hover::after{transform:scaleX(1);transform-origin:0 50%}
+
+/* ---------- HERO ---------- */
+.hero{
+  min-height:100vh;position:relative;display:flex;align-items:center;
+  max-width:1180px;margin:0 auto;padding:0 40px;z-index:2;
+}
+#armillary{
+  position:absolute;right:-6%;top:50%;transform:translateY(-50%);
+  width:min(58vw,720px);height:min(58vw,720px);z-index:0;opacity:.95;
+}
+.hero-inner{position:relative;z-index:2;max-width:620px}
+.hero .kicker{
+  font-family:"Cormorant Garamond",serif;letter-spacing:.42em;font-size:14px;
+  color:var(--gray);text-transform:uppercase;margin-bottom:22px;
+  display:flex;align-items:center;gap:14px;
+}
+.hero .kicker::before{content:"";width:44px;height:1px;background:var(--gold)}
+h1.hero-name{
+  font-size:clamp(64px,10vw,124px);font-weight:900;line-height:.98;
+  color:var(--brown-deep);letter-spacing:.01em;
+}
+h1.hero-name .ch{display:inline-block;transform:translateY(110%) rotate(6deg);opacity:0}
+h1.hero-name .ch.red{color:var(--red)}
+.hero-sub{
+  margin-top:24px;font-size:18px;line-height:2;color:var(--ink-soft);max-width:480px;
+}
+.hero-sub b{color:var(--red);font-weight:600}
+#scramble{
+  display:block;margin-top:10px;font-family:"Cormorant Garamond",serif;
+  font-size:15px;letter-spacing:.24em;color:var(--gold);min-height:22px;
+}
+.hero-cta{display:flex;gap:18px;margin-top:38px}
+.btn{
+  display:inline-block;padding:13px 30px;font-size:15px;letter-spacing:.1em;
+  text-decoration:none;border:1px solid var(--brown);position:relative;overflow:hidden;
+  transition:color .3s;font-family:inherit;
+}
+.btn span{position:relative;z-index:1}
+.btn::before{
+  content:"";position:absolute;inset:0;background:var(--red);
+  transform:scaleX(0);transform-origin:100% 50%;
+  transition:transform .4s cubic-bezier(.22,1,.36,1);
+}
+.btn:hover::before{transform:scaleX(1);transform-origin:0 50%}
+.btn.solid{background:var(--brown-deep);color:#f8f1e2;border-color:var(--brown-deep)}
+.btn.ghost{color:var(--brown-deep)}
+.btn:hover{color:#f8f1e2}
+.scroll-hint{
+  position:absolute;bottom:34px;left:50%;transform:translateX(-50%);
+  font-size:12px;letter-spacing:.3em;color:var(--gray);z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.scroll-hint .wire{width:1px;height:44px;background:var(--gray);position:relative;overflow:hidden}
+.scroll-hint .wire::after{
+  content:"";position:absolute;top:-40%;left:0;width:100%;height:40%;
+  background:var(--red);animation:drip 1.8s cubic-bezier(.65,0,.35,1) infinite;
+}
+@keyframes drip{to{top:110%}}
+
+/* ---------- 贡献热力图 ---------- */
+.heat-summary{
+  display:flex;gap:34px;flex-wrap:wrap;margin-bottom:26px;
+}
+.heat-summary .hs b{
+  font-family:"Cormorant Garamond",serif;font-size:34px;color:var(--red);
+  display:block;line-height:1;font-weight:700;
+}
+.heat-summary .hs i{font-style:normal;font-size:12.5px;color:var(--ink-soft);letter-spacing:.1em;margin-top:6px;display:block}
+.heat-box{
+  background:var(--card);border:1px solid var(--line);padding:26px 26px 18px;
+  overflow-x:auto;position:relative;
+}
+.heat-months{display:flex;font-size:11px;color:var(--gray);margin-bottom:6px;height:14px}
+.heat-months span{position:absolute;white-space:nowrap}
+.heat-grid{display:flex;gap:3px}
+.heat-col{display:flex;flex-direction:column;gap:3px}
+.heat-cell{
+  width:11px;height:11px;border-radius:2px;background:rgba(109,76,47,.12);
+  transform:scale(0);transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+.heat-grid.in .heat-cell{transform:scale(1)}
+.heat-cell[data-hover]{outline:none}
+.heat-cell:hover{outline:1.5px solid var(--brown-deep);outline-offset:0}
+.heat-legend{
+  display:flex;align-items:center;gap:5px;justify-content:flex-end;
+  font-size:11px;color:var(--gray);margin-top:12px;
+}
+.heat-legend .hc{width:11px;height:11px;border-radius:2px;display:inline-block}
+#heatTip{
+  position:fixed;z-index:210;pointer-events:none;opacity:0;transition:opacity .15s;
+  background:var(--brown-deep);color:#f8f1e2;font-size:12px;padding:6px 10px;
+  border-radius:3px;transform:translate(-50%,-130%);white-space:nowrap;
+}
+#heatTip::after{
+  content:"";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--brown-deep);border-bottom:none;
+}
+
+/* ---------- 通用 section ---------- */
+section{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:110px 40px 30px}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:6px}
+.sec-num{font-family:"Cormorant Garamond",serif;font-size:15px;color:var(--red);letter-spacing:.2em}
+h2{font-size:clamp(28px,4vw,38px);font-weight:900;color:var(--brown-deep)}
+.sec-rule{
+  height:1px;background:var(--line);margin:18px 0 44px;position:relative;overflow:visible;
+}
+.sec-rule::before{
+  content:"";position:absolute;left:0;top:-1px;height:3px;width:72px;
+  background:var(--red);
+}
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);transition-delay:calc(var(--i,0)*90ms)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- 数据 ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.stat{background:var(--card);padding:34px 18px;text-align:center;position:relative;overflow:hidden}
+.stat::after{
+  content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 120%, rgba(168,130,60,.18), transparent 60%);
+  opacity:0;transition:opacity .4s;
+}
+.stat:hover::after{opacity:1}
+.stat b{
+  display:block;font-family:"Cormorant Garamond",serif;font-weight:700;
+  font-size:52px;color:var(--red);line-height:1;
+}
+.stat i{font-style:normal;font-size:13.5px;color:var(--ink-soft);letter-spacing:.12em;margin-top:10px;display:block}
+
+/* ---------- 项目卡片 ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:28px;perspective:1200px}
+.card{
+  position:relative;background:var(--card);border:1px solid var(--line);
+  padding:30px 28px 24px;transform-style:preserve-3d;
+  transition:box-shadow .35s;will-change:transform;
+}
+.card:hover{box-shadow:0 24px 48px -12px rgba(84,56,31,.30)}
+.card .glare{
+  position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(420px circle at var(--gx,50%) var(--gy,50%), rgba(255,246,220,.55), transparent 45%);
+}
+.card:hover .glare{opacity:1}
+.card .idx{
+  position:absolute;top:18px;right:22px;font-family:"Cormorant Garamond",serif;
+  font-size:15px;color:var(--gold);letter-spacing:.15em;
+}
+.card h3{font-size:21px;font-weight:700;color:var(--brown-deep);transform:translateZ(30px)}
+.card h3 a{color:inherit;text-decoration:none;background:linear-gradient(var(--red),var(--red)) no-repeat 0 100%/0 2px;transition:background-size .35s}
+.card h3 a:hover{color:var(--red);background-size:100% 2px}
+.card p{margin-top:12px;font-size:14.5px;line-height:1.9;color:var(--ink-soft);min-height:82px;transform:translateZ(18px)}
+.card .meta{
+  margin-top:18px;padding-top:14px;border-top:1px dotted var(--line);
+  display:flex;gap:16px;font-size:12.5px;color:var(--gray);align-items:center;transform:translateZ(12px);
+}
+.card .meta .lg{display:inline-flex;align-items:center;gap:6px}
+.card .meta .lg::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--lc,#8e2f26);border:1px solid rgba(0,0,0,.15)}
+.card .meta .st{color:var(--gold)}
+
+/* ---------- 语言 ---------- */
+.lang-wrap{display:grid;grid-template-columns:300px 1fr;gap:60px;align-items:center}
+.donut-box{position:relative;width:280px;height:280px;margin:0 auto}
+.donut-box svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut-box circle{fill:none;stroke-width:26;transition:stroke-dasharray 1.4s cubic-bezier(.22,1,.36,1)}
+.donut-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+}
+.donut-center b{font-family:"Cormorant Garamond",serif;font-size:44px;color:var(--red);line-height:1}
+.donut-center i{font-style:normal;font-size:12.5px;letter-spacing:.2em;color:var(--gray);margin-top:6px}
+.lang-list{display:flex;flex-direction:column;gap:16px}
+.lang{display:grid;grid-template-columns:110px 1fr 46px;align-items:center;gap:14px}
+.lang .lname{font-size:15px;font-weight:600;color:var(--brown-deep);display:flex;align-items:center;gap:8px}
+.lang .lname::before{content:"";width:10px;height:10px;background:var(--lc);border-radius:2px}
+.lang .bar{height:12px;background:rgba(109,76,47,.12);border:1px solid var(--line);position:relative;overflow:hidden}
+.lang .bar i{
+  position:absolute;inset:1px auto 1px 1px;width:0;display:block;
+  background:linear-gradient(to right,var(--brown),var(--red));
+  transition:width 1.2s cubic-bezier(.22,1,.36,1);
+}
+.lang .pct{font-family:"Cormorant Garamond",serif;color:var(--red);font-size:16px;text-align:right}
+
+/* ---------- 时间线 ---------- */
+.tl{position:relative;padding-left:44px;max-width:720px}
+.tl::before{content:"";position:absolute;left:10px;top:8px;bottom:8px;width:1px;background:var(--line)}
+.tl-fill{
+  position:absolute;left:9px;top:8px;width:3px;height:0;background:linear-gradient(var(--gold),var(--red));
+  transition:height .2s linear;
+}
+.tl-item{position:relative;margin-bottom:44px}
+.tl-item::before{
+  content:"";position:absolute;left:-39px;top:7px;width:11px;height:11px;border-radius:50%;
+  background:var(--parchment);border:2px solid var(--red);
+  transition:background .3s,transform .3s;
+}
+.tl-item:hover::before{background:var(--red);transform:scale(1.35)}
+.tl-item .yr{font-family:"Cormorant Garamond",serif;font-size:24px;color:var(--red);font-weight:700}
+.tl-item .txt{font-size:15px;line-height:1.9;color:var(--ink-soft);margin-top:4px}
+.tl-item .txt b{color:var(--brown-deep)}
+.tl-item .txt a{color:var(--red);text-decoration:none;border-bottom:1px dotted var(--red)}
+
+/* ---------- 页脚 ---------- */
+footer{
+  position:relative;z-index:2;margin-top:120px;padding:56px 40px 44px;text-align:center;
+  border-top:3px double var(--brown);
+}
+footer .big{
+  font-family:"Cormorant Garamond",serif;font-size:clamp(30px,5vw,52px);
+  font-weight:700;color:var(--brown-deep);
+}
+footer .big a{color:var(--red);text-decoration:none}
+footer p{color:var(--gray);font-size:13.5px;margin-top:14px;letter-spacing:.06em}
+
+@media(max-width:860px){
+  body{cursor:auto}a,button{cursor:pointer}
+  .cursor-dot,.cursor-ring{display:none}
+  #armillary{position:relative;right:auto;top:auto;transform:none;width:88vw;height:60vw;margin:0 auto}
+  .hero{flex-direction:column;justify-content:center;padding-top:90px;text-align:center}
+  .hero-inner{max-width:100%}
+  .hero .kicker{justify-content:center}
+  .hero-cta{justify-content:center}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .lang-wrap{grid-template-columns:1fr}
+  nav .links{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="wipe">
+  <div class="wipe-panel p2"></div>
+  <div class="wipe-panel p1"></div>
+  <div class="wipe-mark">L</div>
+</div>
+<canvas id="shader-bg"></canvas>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-ring" id="cring"></div>
+<canvas id="embers"></canvas>
+
+<nav>
+  <div class="brand"><em>L</em>VIE<em>N</em></div>
+  <div class="links">
+    <a href="#stats" data-hover>数据</a>
+    <a href="#activity" data-hover>活跃度</a>
+    <a href="#projects" data-hover>项目</a>
+    <a href="#langs" data-hover>语言</a>
+    <a href="#timeline" data-hover>时间线</a>
+    <a href="https://github.com/LvienOeria" target="_blank" data-hover>GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div id="armillary"></div>
+  <div class="hero-inner">
+    <div class="kicker">Personal Homepage · Est. 2021</div>
+    <h1 class="hero-name" id="heroName"></h1>
+    <p class="hero-sub">
+      你好,我是 <b>Lvien</b>,香港中文大学(深圳)的学生。
+      在 GitHub 上写旅行工具、小游戏,和各种一时兴起但认真做完的东西。
+      <span id="scramble"></span>
+    </p>
+    <div class="hero-cta">
+      <a class="btn solid magnetic" href="https://github.com/LvienOeria" target="_blank" data-hover><span>访问 GitHub ↗</span></a>
+      <a class="btn ghost magnetic" href="#projects" data-hover><span>看看项目 ↓</span></a>
+    </div>
+  </div>
+  <div class="scroll-hint"><span>SCROLL</span><div class="wire"></div></div>
+</header>
+
+<!-- 数据 -->
+<section id="stats">
+  <div class="sec-head reveal"><span class="sec-num">01 /</span><h2>一些数字</h2></div>
+  <div class="sec-rule reveal"></div>
+  <div class="stats">
+    <div class="stat reveal" style="--i:0"><b data-count="22">0</b><i>公开仓库</i></div>
+    <div class="stat reveal" style="--i:1"><b data-count="16">0</b><i>原创项目</i></div>
+    <div class="stat reveal" style="--i:2"><b data-count="7">0</b><i>使用过的语言</i></div>
+    <div class="stat reveal" style="--i:3"><b data-count="2026">0</b><i>仍在活跃 · 年</i></div>
+  </div>
+</section>
+
+<!-- 活跃度热力图 -->
+<section id="activity">
+  <div class="sec-head reveal"><span class="sec-num">02 /</span><h2>过去一年</h2></div>
+  <div class="sec-rule reveal"></div>
+  <div class="heat-summary reveal" style="--i:0">
+    <div class="hs"><b id="heatTotal">–</b><i>次贡献</i></div>
+    <div class="hs"><b id="heatStreak">–</b><i>最长连续天数</i></div>
+    <div class="hs"><b id="heatActive">–</b><i>活跃天数</i></div>
+  </div>
+  <div class="heat-box reveal" style="--i:1">
+    <div class="heat-months" id="heatMonths"></div>
+    <div class="heat-grid" id="heatGrid"></div>
+    <div class="heat-legend">
+      少 <span class="hc" style="background:rgba(109,76,47,.12)"></span>
+      <span class="hc" style="background:#d8bd85"></span>
+      <span class="hc" style="background:#c9a254"></span>
+      <span class="hc" style="background:#b3612f"></span>
+      <span class="hc" style="background:#8e2f26"></span> 多
+    </div>
+  </div>
+</section>
+<div id="heatTip"></div>
+
+<!-- 项目 -->
+<section id="projects">
+  <div class="sec-head reveal"><span class="sec-num">03 /</span><h2>精选项目</h2></div>
+  <div class="sec-rule reveal"></div>
+  <div class="cards" id="cards"></div>
+</section>
+
+<!-- 语言 -->
+<section id="langs">
+  <div class="sec-head reveal"><span class="sec-num">04 /</span><h2>语言构成</h2></div>
+  <div class="sec-rule reveal"></div>
+  <div class="lang-wrap">
+    <div class="donut-box reveal">
+      <svg viewBox="0 0 200 200" id="donut"></svg>
+      <div class="donut-center"><b>16</b><i>原创仓库</i></div>
+    </div>
+    <div class="lang-list reveal" style="--i:1" id="langList"></div>
+  </div>
+</section>
+
+<!-- 时间线 -->
+<section id="timeline">
+  <div class="sec-head reveal"><span class="sec-num">05 /</span><h2>时间线</h2></div>
+  <div class="sec-rule reveal"></div>
+  <div class="tl" id="tl">
+    <div class="tl-fill" id="tlFill"></div>
+    <div class="tl-item reveal" style="--i:0">
+      <div class="yr">2021</div>
+      <div class="txt">5 月注册 GitHub,有了第一个仓库。</div>
+    </div>
+    <div class="tl-item reveal" style="--i:1">
+      <div class="yr">2022 – 2024</div>
+      <div class="txt">课程与练习阶段:<b>CSC3050</b> 作业、全栈练习 <b>fullStackExercise</b>、50 天 50 个前端小项目 <b>50-50-react</b>、Java 课程项目 <b>21sp-chx</b>。</div>
+    </div>
+    <div class="tl-item reveal" style="--i:2">
+      <div class="yr">2025</div>
+      <div class="txt">用 GitHub Pages 搭了第一个个人主页 <a href="https://github.com/LvienOeria/LvienOeria.github.io" target="_blank" data-hover><b>LvienOeria.github.io</b></a>。</div>
+    </div>
+    <div class="tl-item reveal" style="--i:3">
+      <div class="yr">2026</div>
+      <div class="txt">高产的一年:像素 Roguelike <b>embercore</b>、旅行规划 <b>途迹</b>、旅行日记 <b>亦旅</b>、客服 Agent <b>cs-agent</b>、杀戮尖塔 2 Mod <b>NongShenMod</b>,以及拿到第一批 Star 的 <b>dsh-launcher</b> 系列……一半以上的项目都诞生在这一年。</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="big reveal">来 <a href="https://github.com/LvienOeria" target="_blank" data-hover>GitHub</a> 找我 →</div>
+  <p class="reveal" style="--i:1">纯手写 HTML / CSS / JS + Three.js · 数据来自 GitHub API · © 2026 Lvien</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+/* ================= 数据 ================= */
+const PROJECTS = [
+  {name:"dsh-launcher", url:"https://github.com/LvienOeria/dsh-launcher", lang:"JavaScript", color:"#b08d3e", star:3,
+   desc:"轻量的 dsh(DeepSeek Harness)插件:装一个终端命令,输入 dsh-go 即可启动 harness 并自动打开浏览器。零依赖,约 9 KB。"},
+  {name:"dsh-desktop-launcher", url:"https://github.com/LvienOeria/dsh-desktop-launcher", lang:"JavaScript", color:"#b08d3e", star:2,
+   desc:"dsh 的桌面双击启动器:macOS 上是带官方鲸鱼图标的 dsh.app,Linux 上是 .desktop 入口。零依赖,约 147 KB。"},
+  {name:"embercore", url:"https://github.com/LvienOeria/embercore", lang:"HTML", color:"#8e2f26", star:1,
+   desc:"网页版 2D 像素 Roguelike:元素共鸣、芯核替换、三重回廊。全部美术与音效程序化生成,零依赖,打开即玩。"},
+  {name:"traverse-china-travel", url:"https://github.com/LvienOeria/traverse-china-travel", lang:"TypeScript", color:"#2f5f8e",
+   desc:"「途迹」基于 Cesium 的中国可视化旅行规划:景点/机场/车站图钉、真实导航路线、地形贴合、时间着色轨迹。"},
+  {name:"JournalJoins", url:"https://github.com/LvienOeria/JournalJoins", lang:"JavaScript", color:"#b08d3e", star:1,
+   desc:"「亦旅」旅行日记分享与规划:多级下钻地图、时空连续体日记、自由规划引擎(任意设点 + 引用他人组件 + 拖拽排序)。"},
+  {name:"cs-agent", url:"https://github.com/LvienOeria/cs-agent", lang:"TypeScript", color:"#2f5f8e",
+   desc:"客服智能体,使用 ReAct + RAG + SSE 构建,会推理、会检索、流式作答。"},
+  {name:"NongShenMod", url:"https://github.com/LvienOeria/NongShenMod", lang:"C#", color:"#54381f",
+   desc:"《杀戮尖塔 2》的「农神」角色 Mod,用 C# 编写。"},
+  {name:"zen-protocol", url:"https://github.com/LvienOeria/zen-protocol", lang:"Solidity", color:"#a8823c",
+   desc:"用 Solidity 写的链上协议项目。"},
+  {name:"gently_wakeup", url:"https://github.com/LvienOeria/gently_wakeup", lang:"—", color:"#7c7568", star:1,
+   desc:"一个温柔的唤醒工具。"},
+];
+const LANGS = [
+  {name:"JavaScript", pct:40, color:"#b08d3e"},
+  {name:"TypeScript", pct:13, color:"#2f5f8e"},
+  {name:"HTML",       pct:13, color:"#8e2f26"},
+  {name:"Python",     pct:13, color:"#54381f"},
+  {name:"C#",         pct:7,  color:"#6d4c2f"},
+  {name:"Solidity",   pct:7,  color:"#a8823c"},
+  {name:"Java",       pct:7,  color:"#7c7568"},
+];
+
+/* ================= Hero 名字逐字入场 ================= */
+(function(){
+  const el = document.getElementById('heroName');
+  const name = "LVIEN";
+  [...name].forEach((c,i)=>{
+    const s = document.createElement('span');
+    s.className = 'ch' + (i===0||i===4 ? ' red' : '');
+    s.textContent = c;
+    el.appendChild(s);
+  });
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#heroName .ch').forEach((s,i)=>{
+      s.style.transition = `transform 1s cubic-bezier(.22,1,.36,1) ${0.15+i*0.09}s, opacity .6s ease ${0.15+i*0.09}s`;
+      s.style.transform = 'none';
+      s.style.opacity = '1';
+    });
+  });
+})();
+
+/* ================= 文字乱序解码 ================= */
+(function(){
+  const el = document.getElementById('scramble');
+  const phrases = ["CODE · TRAVEL · GAMES", "光阴虚度中", "GITHUB.COM/LVIENOERIA", "BUILDING SINCE MMXXI"];
+  const chars = "!<>-_\\/[]{}—=+*^?#①②③④";
+  let frame=0, queue=[], raf, pi=0;
+  function setText(newText){
+    const old = el.innerText, len = Math.max(old.length, newText.length);
+    queue = [];
+    for(let i=0;i<len;i++){
+      queue.push({from:old[i]||"", to:newText[i]||"", start:Math.floor(Math.random()*30), end:Math.floor(Math.random()*30)+15});
+    }
+    cancelAnimationFrame(raf); frame=0; update();
+  }
+  function update(){
+    let out="", done=0;
+    queue.forEach(q=>{
+      if(frame>=q.end){done++;out+=q.to;}
+      else if(frame>=q.start){
+        if(!q.c || Math.random()<0.28) q.c = chars[Math.floor(Math.random()*chars.length)];
+        out += `<span style="color:var(--red);opacity:.7">${q.c}</span>`;
+      } else out += q.from;
+    });
+    el.innerHTML = out;
+    if(done < queue.length){frame++; raf=requestAnimationFrame(update);}
+  }
+  setText(phrases[0]);
+  setInterval(()=>{ pi=(pi+1)%phrases.length; setText(phrases[pi]); }, 3800);
+})();
+
+/* ================= 自定义光标 ================= */
+(function(){
+  const dot=document.getElementById('cdot'), ring=document.getElementById('cring');
+  let mx=innerWidth/2,my=innerHeight/2, rx=mx, ry=my;
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;
+    dot.style.transform=`translate(${mx-4}px,${my-4}px)`;});
+  (function loop(){
+    rx+=(mx-rx)*0.16; ry+=(my-ry)*0.16;
+    ring.style.transform=`translate(${rx-18}px,${ry-18}px)`;
+    requestAnimationFrame(loop);
+  })();
+  document.addEventListener('mouseover',e=>{
+    document.body.classList.toggle('cursor-hover', !!e.target.closest('[data-hover],a,button,.card'));
+  });
+})();
+
+/* ================= 余烬粒子 ================= */
+(function(){
+  const cv=document.getElementById('embers'), ctx=cv.getContext('2d');
+  let W,H,parts=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  resize(); addEventListener('resize',resize);
+  const N = Math.min(46, innerWidth/28|0);
+  for(let i=0;i<N;i++) parts.push(spawn(true));
+  function spawn(init){
+    return {x:Math.random()*W, y:init?Math.random()*H:H+10,
+      r:Math.random()*2.2+0.7, vy:-(Math.random()*0.45+0.15),
+      vx:(Math.random()-0.5)*0.25, a:Math.random()*0.5+0.2,
+      hue:Math.random()<0.6?'168,130,60':'168,60,44', ph:Math.random()*Math.PI*2};
+  }
+  (function draw(t){
+    ctx.clearRect(0,0,W,H);
+    parts.forEach((p,i)=>{
+      p.x+=p.vx+Math.sin(t/1600+p.ph)*0.18; p.y+=p.vy;
+      const flicker = 0.55+0.45*Math.sin(t/300+p.ph);
+      ctx.beginPath();
+      ctx.fillStyle=`rgba(${p.hue},${p.a*flicker})`;
+      ctx.shadowColor=`rgba(${p.hue},.8)`; ctx.shadowBlur=8;
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      if(p.y<-12) parts[i]=spawn(false);
+    });
+    requestAnimationFrame(draw);
+  })(0);
+})();
+
+/* ================= Three.js 黄铜浑天仪 ================= */
+(function(){
+  if(!window.THREE) return;
+  const holder=document.getElementById('armillary');
+  const W=holder.clientWidth, H=holder.clientHeight;
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(38, W/H, .1, 100);
+  camera.position.set(0,0.4,7.2);
+  const renderer=new THREE.WebGLRenderer({alpha:true, antialias:true});
+  renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  holder.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xfff4dd, 1.1));
+  const key=new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(4,6,6); scene.add(key);
+  const rim=new THREE.DirectionalLight(0xc9a254, 1.2); rim.position.set(-5,-3,-4); scene.add(rim);
+
+  const gold=new THREE.MeshStandardMaterial({color:0xa8823c, metalness:0.85, roughness:0.32});
+  const goldBright=new THREE.MeshStandardMaterial({color:0xc9a254, metalness:0.9, roughness:0.22});
+  const redM=new THREE.MeshStandardMaterial({color:0x8e2f26, metalness:0.35, roughness:0.45});
+  const brownM=new THREE.MeshStandardMaterial({color:0x6d4c2f, metalness:0.6, roughness:0.5});
+
+  const rig=new THREE.Group(); scene.add(rig);
+  const rings=[];
+  [[2.05,.028,gold],[1.8,.02,goldBright],[1.55,.024,gold],[1.28,.016,brownM],[1.0,.02,goldBright]].forEach(([r,tube,m],i)=>{
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(r,tube,16,140), m);
+    ring.userData={sx:0.15+i*0.11, sy:0.2+i*0.07, sz:0.1+i*0.05};
+    rings.push(ring); rig.add(ring);
+    // 环上的刻度珠
+    for(let k=0;k<8;k++){
+      const bead=new THREE.Mesh(new THREE.SphereGeometry(0.035,10,10), goldBright);
+      const a=k/8*Math.PI*2;
+      bead.position.set(Math.cos(a)*r, Math.sin(a)*r, 0);
+      ring.add(bead);
+    }
+  });
+  // 核心:红色二十面体
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(0.55,0), redM);
+  rig.add(core);
+  const coreWire=new THREE.Mesh(new THREE.IcosahedronGeometry(0.72,0),
+    new THREE.MeshBasicMaterial({color:0xa8823c, wireframe:true, transparent:true, opacity:0.5}));
+  rig.add(coreWire);
+  // 轴杆
+  const axle=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,4.6,10), brownM);
+  axle.rotation.z=Math.PI/2.6; rig.add(axle);
+  // 环绕小卫星
+  const moons=[];
+  for(let i=0;i<3;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.07,12,12), redM);
+    m.userData={r:2.35+i*0.18, sp:0.4+i*0.22, off:i*2.1};
+    moons.push(m); rig.add(m);
+  }
+
+  let mx=0,my=0;
+  addEventListener('mousemove',e=>{
+    mx=(e.clientX/innerWidth-0.5)*2; my=(e.clientY/innerHeight-0.5)*2;
+  });
+  (function anim(t){
+    const time=t*0.001;
+    rings.forEach(r=>{
+      r.rotation.x=time*r.userData.sx;
+      r.rotation.y=time*r.userData.sy;
+      r.rotation.z=time*r.userData.sz;
+    });
+    core.rotation.y=time*0.5; core.rotation.x=time*0.23;
+    coreWire.rotation.y=-time*0.34;
+    moons.forEach(m=>{
+      const a=time*m.userData.sp+m.userData.off;
+      m.position.set(Math.cos(a)*m.userData.r, Math.sin(a)*m.userData.r*0.4, Math.sin(a)*m.userData.r*0.6);
+    });
+    rig.rotation.y += ((mx*0.55) - rig.rotation.y)*0.045;
+    rig.rotation.x += ((my*0.35) - rig.rotation.x)*0.045;
+    rig.position.y = Math.sin(time*0.6)*0.12;
+    renderer.render(scene,camera);
+    requestAnimationFrame(anim);
+  })(0);
+  addEventListener('resize',()=>{
+    const w=holder.clientWidth,h=holder.clientHeight;
+    camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h);
+  });
+})();
+
+/* ================= 项目卡片渲染 + 3D 倾斜 ================= */
+(function(){
+  const wrap=document.getElementById('cards');
+  PROJECTS.forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='card reveal'; d.style.setProperty('--i', i%3);
+    d.style.setProperty('--lc', p.color);
+    d.innerHTML=`
+      <div class="glare"></div>
+      <div class="idx">${String(i+1).padStart(2,'0')}</div>
+      <h3><a href="${p.url}" target="_blank" data-hover>${p.name}</a></h3>
+      <p>${p.desc}</p>
+      <div class="meta">
+        <span class="lg">${p.lang}</span>
+        ${p.star?`<span class="st">★ ${p.star}</span>`:""}
+      </div>`;
+    wrap.appendChild(d);
+  });
+  if(matchMedia('(hover:hover)').matches){
+    wrap.querySelectorAll('.card').forEach(card=>{
+      card.addEventListener('mousemove',e=>{
+        const r=card.getBoundingClientRect();
+        const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
+        card.style.transition='box-shadow .35s';
+        card.style.transform=`rotateY(${(px-0.5)*14}deg) rotateX(${(0.5-py)*12}deg) translateZ(6px)`;
+        card.style.setProperty('--gx', px*100+'%');
+        card.style.setProperty('--gy', py*100+'%');
+      });
+      card.addEventListener('mouseleave',()=>{
+        card.style.transition='transform .6s cubic-bezier(.22,1,.36,1), box-shadow .35s';
+        card.style.transform='none';
+      });
+    });
+  }
+})();
+
+/* ================= 语言:条形 + 环形图 ================= */
+(function(){
+  const list=document.getElementById('langList');
+  LANGS.forEach(l=>{
+    const d=document.createElement('div');
+    d.className='lang'; d.style.setProperty('--lc', l.color);
+    d.innerHTML=`<span class="lname">${l.name}</span>
+      <div class="bar"><i data-w="${l.pct}"></i></div>
+      <span class="pct">${l.pct}%</span>`;
+    list.appendChild(d);
+  });
+  const svg=document.getElementById('donut');
+  const R=80, C=2*Math.PI*R; let acc=0;
+  const NS='http://www.w3.org/2000/svg';
+  LANGS.forEach(l=>{
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',100); c.setAttribute('cy',100); c.setAttribute('r',R);
+    c.setAttribute('stroke', l.color);
+    const len=l.pct/100*C;
+    c.setAttribute('stroke-dasharray', `0 ${C}`);
+    c.setAttribute('stroke-dashoffset', -acc/100*C);
+    c.dataset.target=`${len-1.5} ${C}`;
+    svg.appendChild(c);
+    acc+=l.pct;
+  });
+})();
+
+/* ================= 滚动观察:reveal / 计数 / 条形 / 环形 ================= */
+(function(){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(!e.isIntersecting) return;
+      e.target.classList.add('in');
+      // 数字滚动
+      e.target.querySelectorAll('[data-count]').forEach(b=>{
+        if(b.dataset.done) return; b.dataset.done=1;
+        const T=+b.dataset.count, t0=performance.now(), dur=1500;
+        (function tick(t){
+          const k=Math.min((t-t0)/dur,1), ease=1-Math.pow(1-k,3);
+          b.textContent=Math.round(T*ease);
+          if(k<1) requestAnimationFrame(tick);
+        })(t0);
+      });
+      // 条形图
+      e.target.querySelectorAll('.lang .bar i').forEach(i=>i.style.width=i.dataset.w+'%');
+      // 环形图
+      e.target.querySelectorAll('#donut circle').forEach((c,idx)=>{
+        setTimeout(()=>c.setAttribute('stroke-dasharray', c.dataset.target), idx*120);
+      });
+      io.unobserve(e.target);
+    });
+  },{threshold:0.25});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+
+/* ================= 顶部进度条 + 时间线填充 ================= */
+(function(){
+  const bar=document.getElementById('progress'), tl=document.getElementById('tl'), fill=document.getElementById('tlFill');
+  addEventListener('scroll',()=>{
+    const k=scrollY/(document.documentElement.scrollHeight-innerHeight);
+    bar.style.transform=`scaleX(${k})`;
+    const r=tl.getBoundingClientRect();
+    const p=Math.min(Math.max((innerHeight*0.75-r.top)/r.height,0),1);
+    fill.style.height=(p*(r.height-16))+'px';
+  },{passive:true});
+})();
+
+/* ================= 页面过渡幕布 ================= */
+(function(){
+  const wipe=document.getElementById('wipe');
+  // 入场:幕布从覆盖状态向上撤走
+  addEventListener('load',()=>{
+    setTimeout(()=>{
+      wipe.classList.add('leave');
+      setTimeout(()=>wipe.classList.add('gone'), 900);
+    }, 550);
+  });
+  // 锚点导航:幕布盖上 → 跳转 → 撤走
+  document.querySelectorAll('nav .links a[href^="#"], .hero-cta a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const id=a.getAttribute('href');
+      const target=document.querySelector(id);
+      if(!target) return;
+      e.preventDefault();
+      wipe.classList.remove('gone','leave');
+      // 强制重排后立即盖上
+      void wipe.offsetWidth;
+      const p1=wipe.querySelector('.p1'), p2=wipe.querySelector('.p2'), mark=wipe.querySelector('.wipe-mark');
+      [p1,p2].forEach(p=>{p.style.transition='transform .5s cubic-bezier(.76,0,.24,1)';p.style.transform='translateY(0)'});
+      p2.style.transitionDelay='.07s';
+      mark.style.opacity='1';
+      setTimeout(()=>{
+        target.scrollIntoView({behavior:'auto',block:'start'});
+        setTimeout(()=>{
+          [p1,p2].forEach(p=>{p.style.transition='transform .62s cubic-bezier(.76,0,.24,1)';p.style.transform='translateY(-102%)'});
+          p2.style.transitionDelay='.09s';
+          mark.style.opacity='0';
+          setTimeout(()=>{
+            wipe.classList.add('gone');
+            [p1,p2].forEach(p=>{p.style.transition='none';p.style.transform='translateY(0)'});
+          },800);
+        },80);
+      },560);
+    });
+  });
+})();
+
+/* ================= WebGL 流体大理石着色器背景 ================= */
+(function(){
+  const cv=document.getElementById('shader-bg');
+  const gl=cv.getContext('webgl',{antialias:false});
+  if(!gl){cv.remove();return;}
+  const vs=`attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+  const fs=`
+precision mediump float;
+uniform float u_time;uniform vec2 u_res;uniform vec2 u_mouse;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){
+  vec2 i=floor(p),f=fract(p);
+  f=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),
+             mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+}
+float fbm(vec2 p){
+  float v=0.,a=.5;
+  for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+vec2(1.7,4.1);a*=.5;}
+  return v;
+}
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_res;
+  uv.x*=u_res.x/u_res.y;
+  float t=u_time*.045;
+  vec2 m=(u_mouse-.5)*.3;
+  vec2 q=vec2(fbm(uv*1.5+t+m),fbm(uv*1.5-t*.7-m));
+  float f=fbm(uv*2.1+q*1.9+vec2(t*.3,-t*.2));
+  float f2=fbm(uv*3.2-q*1.2);
+  vec3 base =vec3(.953,.918,.839);
+  vec3 gold =vec3(.788,.635,.360);
+  vec3 red  =vec3(.557,.184,.149);
+  vec3 brown=vec3(.427,.298,.184);
+  vec3 col=mix(base,gold,smoothstep(.35,.8,f)*.30);
+  col=mix(col,brown,smoothstep(.62,.95,f)*.16);
+  col=mix(col,red,smoothstep(.66,.98,f2)*.10);
+  // 柔和暗角
+  vec2 c=gl_FragCoord.xy/u_res-.5;
+  col*=1.-dot(c,c)*.35;
+  gl_FragColor=vec4(col,1.);
+}`;
+  function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+  const prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  const loc=gl.getAttribLocation(prog,'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  const uT=gl.getUniformLocation(prog,'u_time'),
+        uR=gl.getUniformLocation(prog,'u_res'),
+        uM=gl.getUniformLocation(prog,'u_mouse');
+  let mx=.5,my=.5,smx=.5,smy=.5;
+  addEventListener('mousemove',e=>{mx=e.clientX/innerWidth;my=1-e.clientY/innerHeight;});
+  function resize(){
+    const dpr=Math.min(devicePixelRatio,1.5);
+    cv.width=innerWidth*dpr; cv.height=innerHeight*dpr;
+    gl.viewport(0,0,cv.width,cv.height);
+  }
+  resize();addEventListener('resize',resize);
+  (function anim(t){
+    smx+=(mx-smx)*.03; smy+=(my-smy)*.03;
+    gl.uniform1f(uT,t*.001);
+    gl.uniform2f(uR,cv.width,cv.height);
+    gl.uniform2f(uM,smx,smy);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    requestAnimationFrame(anim);
+  })(0);
+})();
+
+/* ================= 贡献热力图 ================= */
+(function(){
+  const grid=document.getElementById('heatGrid'),
+        months=document.getElementById('heatMonths'),
+        tip=document.getElementById('heatTip');
+  const COLORS=['rgba(109,76,47,.12)','#d8bd85','#c9a254','#b3612f','#8e2f26'];
+  fetch('https://github-contributions-api.jogruber.de/v4/LvienOeria?y=last')
+    .then(r=>r.json())
+    .then(data=>{
+      const days=data.contributions;
+      // 汇总
+      const total=days.reduce((s,d)=>s+d.count,0);
+      const active=days.filter(d=>d.count>0).length;
+      let streak=0,best=0;
+      days.forEach(d=>{streak=d.count>0?streak+1:0;best=Math.max(best,streak);});
+      countUp('heatTotal',total);countUp('heatStreak',best);countUp('heatActive',active);
+      // 按周分列(周日开头)
+      const weeks=[];let col=[];
+      days.forEach((d,i)=>{
+        const wd=new Date(d.date+'T00:00:00').getDay();
+        if(i===0)for(let k=0;k<wd;k++)col.push(null);
+        col.push(d);
+        if(col.length===7){weeks.push(col);col=[];}
+      });
+      if(col.length)weeks.push(col);
+      const MN=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+      let lastM=-1,cellIdx=0;
+      weeks.forEach((w,wi)=>{
+        const c=document.createElement('div');c.className='heat-col';
+        w.forEach(d=>{
+          const cell=document.createElement('div');
+          if(d){
+            cell.className='heat-cell';
+            cell.style.background=COLORS[d.level];
+            cell.style.transitionDelay=(cellIdx++*4)+'ms';
+            cell.dataset.info=`${d.date} · ${d.count} 次贡献`;
+            cell.setAttribute('data-hover','');
+          }else{
+            cell.style.width='11px';cell.style.height='11px';
+          }
+          c.appendChild(cell);
+        });
+        grid.appendChild(c);
+        // 月份标签
+        const first=w.find(Boolean);
+        if(first){
+          const m=+first.date.slice(5,7)-1;
+          if(m!==lastM){
+            lastM=m;
+            const s=document.createElement('span');
+            s.textContent=MN[m];
+            s.style.left=(wi*14+26)+'px';
+            months.appendChild(s);
+          }
+        }
+      });
+      months.style.position='relative';
+      // tooltip
+      grid.addEventListener('mousemove',e=>{
+        const c=e.target.closest('.heat-cell');
+        if(!c||!c.dataset.info){tip.style.opacity=0;return;}
+        tip.textContent=c.dataset.info;
+        tip.style.left=e.clientX+'px';
+        tip.style.top=e.clientY+'px';
+        tip.style.opacity=1;
+      });
+      grid.addEventListener('mouseleave',()=>tip.style.opacity=0);
+      // 进入视口时逐格弹出
+      const io=new IntersectionObserver(es=>{
+        es.forEach(en=>{if(en.isIntersecting){grid.classList.add('in');io.disconnect();}});
+      },{threshold:.2});
+      io.observe(grid);
+    })
+    .catch(()=>{
+      grid.innerHTML='<p style="color:var(--gray);font-size:14px;padding:20px 0">贡献数据暂时加载失败,稍后再来看看。</p>';
+    });
+  function countUp(id,T){
+    const el=document.getElementById(id),t0=performance.now();
+    (function tick(t){
+      const k=Math.min((t-t0)/1400,1);
+      el.textContent=Math.round(T*(1-Math.pow(1-k,3)));
+      if(k<1)requestAnimationFrame(tick);
+    })(t0);
+  }
+})();
+
+/* ================= 磁吸按钮 ================= */
+(function(){
+  if(!matchMedia('(hover:hover)').matches) return;
+  document.querySelectorAll('.magnetic').forEach(el=>{
+    el.addEventListener('mousemove',e=>{
+      const r=el.getBoundingClientRect();
+      el.style.transition='transform .1s';
+      el.style.transform=`translate(${(e.clientX-r.left-r.width/2)*0.25}px,${(e.clientY-r.top-r.height/2)*0.35}px)`;
+    });
+    el.addEventListener('mouseleave',()=>{
+      el.style.transition='transform .45s cubic-bezier(.22,1,.36,1)';
+      el.style.transform='none';
+    });
+  });
+})();
+</script>
+</body>
 </html>
