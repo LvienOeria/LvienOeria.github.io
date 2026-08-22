@@ -475,7 +475,11 @@ footer p{color:var(--gray);font-size:13.5px;margin-top:14px;letter-spacing:.06em
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script>
 /* ================= 数据 ================= */
-const PROJECTS = [
+const GITHUB_USER = 'LvienOeria';
+const GITHUB_API = 'https://api.github.com';
+
+// 手工精选项目:描述是人写的,Stars 等数据由 GitHub API 自动刷新
+const FALLBACK_PROJECTS = [
   {name:"dsh-launcher", url:"https://github.com/LvienOeria/dsh-launcher", lang:"JavaScript", color:"#b08d3e", star:3,
    desc:"轻量的 dsh(DeepSeek Harness)插件:装一个终端命令,输入 dsh-go 即可启动 harness 并自动打开浏览器。零依赖,约 9 KB。"},
   {name:"dsh-desktop-launcher", url:"https://github.com/LvienOeria/dsh-desktop-launcher", lang:"JavaScript", color:"#b08d3e", star:2,
@@ -495,7 +499,8 @@ const PROJECTS = [
   {name:"gently_wakeup", url:"https://github.com/LvienOeria/gently_wakeup", lang:"—", color:"#7c7568", star:1,
    desc:"一个温柔的唤醒工具。"},
 ];
-const LANGS = [
+
+const FALLBACK_LANGS = [
   {name:"JavaScript", pct:40, color:"#b08d3e"},
   {name:"TypeScript", pct:13, color:"#2f5f8e"},
   {name:"HTML",       pct:13, color:"#8e2f26"},
@@ -504,6 +509,252 @@ const LANGS = [
   {name:"Solidity",   pct:7,  color:"#a8823c"},
   {name:"Java",       pct:7,  color:"#7c7568"},
 ];
+
+const LANG_COLORS = {
+  JavaScript:"#b08d3e",
+  TypeScript:"#2f5f8e",
+  HTML:"#8e2f26",
+  Python:"#54381f",
+  "C#":"#6d4c2f",
+  Solidity:"#a8823c",
+  Java:"#7c7568",
+  CSS:"#2f5f8e",
+  Vue:"#54381f",
+  Go:"#2f5f8e",
+  Rust:"#b3612f",
+  "C++":"#54381f",
+  C:"#54381f",
+  Shell:"#7c7568",
+  Dockerfile:"#2f5f8e",
+  "Jupyter Notebook":"#b3612f"
+};
+
+let revealObserver = null;
+function observeReveal(el){ if(revealObserver) revealObserver.observe(el); }
+
+/* ================= GitHub API 自动同步 ================= */
+async function fetchAllRepos(){
+  const all = [];
+  for(let page = 1; page <= 3; page++){
+    const res = await fetch(`${GITHUB_API}/users/${GITHUB_USER}/repos?per_page=100&page=${page}&sort=updated`, {
+      headers: { Accept: "application/vnd.github+json" }
+    });
+    if(!res.ok) throw new Error("GitHub repos API " + res.status);
+    const data = await res.json();
+    all.push(...data);
+    if(data.length < 100) break;
+  }
+  return all;
+}
+
+function buildLangs(repos){
+  const counts = {};
+  repos.filter(r => !r.fork && r.language).forEach(r => {
+    counts[r.language] = (counts[r.language] || 0) + 1;
+  });
+  const total = repos.filter(r => !r.fork && r.language).length;
+  const langs = Object.entries(counts)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 7)
+    .map(([name, count]) => {
+      const pct = Math.max(1, Math.round(count / total * 100));
+      return { name, pct, color: LANG_COLORS[name] || "#7c7568" };
+    })
+    .sort((a,b) => b.pct - a.pct);
+  // 四舍五入可能让总和不等于 100,把差额补到最大的语言上,保证环形图不越界
+  const sum = langs.reduce((s,l) => s + l.pct, 0);
+  if(langs.length && sum !== 100) langs[0].pct = Math.max(1, langs[0].pct + (100 - sum));
+  return langs;
+}
+
+function mergeProjects(repos){
+  const curatedSet = new Set(FALLBACK_PROJECTS.map(p => p.name));
+  const byName = new Map(repos.map(r => [r.name, r]));
+  const featured = [];
+  const auto = [];
+
+  FALLBACK_PROJECTS.forEach(p => {
+    const r = byName.get(p.name);
+    featured.push({
+      name: p.name,
+      url: p.url,
+      lang: r && r.language ? r.language : p.lang,
+      color: r && LANG_COLORS[r.language] ? LANG_COLORS[r.language] : p.color,
+      star: r ? (r.stargazers_count || 0) : (p.star || 0),
+      desc: p.desc,
+      featured: true
+    });
+  });
+
+  repos.filter(r => !r.fork && !curatedSet.has(r.name)).forEach(r => {
+    auto.push({
+      name: r.name,
+      url: r.html_url,
+      lang: r.language || "—",
+      color: LANG_COLORS[r.language] || "#7c7568",
+      star: r.stargazers_count || 0,
+      desc: r.description || "GitHub 上最近更新的项目,欢迎 Star / 提 Issue。",
+      featured: false
+    });
+  });
+
+  // 精选项目优先,然后按 Star 数补充最近的新项目;最多展示 12 个
+  const merged = featured.concat(auto);
+  merged.sort((a,b) => {
+    if(a.featured !== b.featured) return a.featured ? -1 : 1;
+    return (b.star || 0) - (a.star || 0);
+  });
+  return merged.slice(0, 12);
+}
+
+/* ================= 项目卡片渲染 ================= */
+function renderProjects(projects){
+  const wrap = document.getElementById('cards');
+  wrap.innerHTML = "";
+  projects.forEach((p, i) => {
+    const d = document.createElement("div");
+    d.className = "card reveal";
+    d.style.setProperty("--i", i % 3);
+    d.style.setProperty("--lc", p.color);
+    d.innerHTML = `
+      <div class="glare"></div>
+      <div class="idx">${String(i+1).padStart(2,"0")}</div>
+      <h3><a href="${p.url}" target="_blank" data-hover>${p.name}</a></h3>
+      <p>${p.desc}</p>
+      <div class="meta">
+        <span class="lg">${p.lang}</span>
+        ${p.star ? `<span class="st">★ ${p.star}</span>` : ""}
+      </div>`;
+    wrap.appendChild(d);
+    observeReveal(d);
+  });
+
+  if(matchMedia("(hover:hover)").matches){
+    wrap.querySelectorAll(".card").forEach(card => {
+      card.addEventListener("mousemove", e => {
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+        card.style.transition = "box-shadow .35s";
+        card.style.transform = `rotateY(${(px-.5)*14}deg) rotateX(${(.5-py)*12}deg) translateZ(6px)`;
+        card.style.setProperty("--gx", px * 100 + "%");
+        card.style.setProperty("--gy", py * 100 + "%");
+      });
+      card.addEventListener("mouseleave", () => {
+        card.style.transition = "transform .6s cubic-bezier(.22,1,.36,1), box-shadow .35s";
+        card.style.transform = "none";
+      });
+    });
+  }
+}
+
+/* ================= 语言:条形 + 环形图 ================= */
+function renderLangs(langs, immediate){
+  const list = document.getElementById("langList");
+  const svg = document.getElementById("donut");
+  list.innerHTML = "";
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+  langs.forEach(l => {
+    const d = document.createElement("div");
+    d.className = "lang";
+    d.style.setProperty("--lc", l.color);
+    d.innerHTML = `<span class="lname">${l.name}</span>
+      <div class="bar"><i data-w="${l.pct}"></i></div>
+      <span class="pct">${l.pct}%</span>`;
+    list.appendChild(d);
+  });
+
+  const R = 80, C = 2 * Math.PI * R;
+  let acc = 0;
+  const NS = "http://www.w3.org/2000/svg";
+  langs.forEach(l => {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", 100);
+    c.setAttribute("cy", 100);
+    c.setAttribute("r", R);
+    c.setAttribute("stroke", l.color);
+    const len = l.pct / 100 * C;
+    c.setAttribute("stroke-dasharray", `0 ${C}`);
+    c.setAttribute("stroke-dashoffset", -acc / 100 * C);
+    c.dataset.target = `${len - 1.5} ${C}`;
+    svg.appendChild(c);
+    acc += l.pct;
+  });
+
+  // 初次渲染交给 IntersectionObserver 做滚动动画;API 刷新成新数据时立即呈现
+  if(immediate){
+    requestAnimationFrame(() => {
+      list.querySelectorAll(".lang .bar i").forEach(i => i.style.width = i.dataset.w + "%");
+      svg.querySelectorAll("circle").forEach((c, idx) => {
+        setTimeout(() => c.setAttribute("stroke-dasharray", c.dataset.target), idx * 120);
+      });
+    });
+  }
+}
+
+/* ================= 数字 / 语言数据刷新 ================= */
+function renderStats(user, repos, langs){
+  const reposCount = user.public_repos || repos.length;
+  const originalCount = repos.filter(r => !r.fork).length;
+  const langCount = langs.length;
+  const activeYear = new Date().getFullYear();
+  const values = [reposCount, originalCount, langCount, activeYear];
+  document.querySelectorAll(".stat b").forEach((b, i) => {
+    b.dataset.count = values[i];
+    if(b.dataset.done) b.textContent = values[i];
+  });
+  const center = document.querySelector(".donut-center b");
+  if(center) center.textContent = originalCount;
+}
+
+function applyGitHubData(user, repos){
+  const langs = buildLangs(repos);
+  renderStats(user, repos, langs);
+  renderProjects(mergeProjects(repos));
+  renderLangs(langs, true);
+}
+
+async function loadLiveGitHubData(){
+  const [userRes, repos] = await Promise.all([
+    fetch(`${GITHUB_API}/users/${GITHUB_USER}`, { headers: { Accept: "application/vnd.github+json" } }),
+    fetchAllRepos()
+  ]);
+  if(!userRes.ok) throw new Error("GitHub user API " + userRes.status);
+  const user = await userRes.json();
+  applyGitHubData(user, repos);
+}
+
+async function loadGitHubData(){
+  // 优先使用 GitHub Actions 每天生成的 data.json 缓存
+  try{
+    const res = await fetch("data.json", { cache: "no-store" });
+    if(res.ok){
+      const data = await res.json();
+      if(data && data.user && Array.isArray(data.repos)){
+        const age = Date.now() - new Date(data.updatedAt).getTime();
+        // 缓存不超过 2 天就直接用;超过则尝试实时 API 刷新
+        if(age < 2 * 24 * 60 * 60 * 1000){
+          applyGitHubData(data.user, data.repos);
+          return;
+        }
+      }
+    }
+  }catch(err){
+    // data.json 还不存在时保持静默,继续尝试实时 API
+  }
+
+  // 没有缓存时再实时拉取;失败则回退到本地 fallback 数据
+  try{
+    await loadLiveGitHubData();
+  }catch(err){
+    console.warn("GitHub 自动更新失败,继续使用本地数据。", err);
+  }
+}
+
+// 先用本地数据渲染一次,保证页面立即可用
+renderProjects(FALLBACK_PROJECTS);
+renderLangs(FALLBACK_LANGS);
+loadGitHubData();
 
 /* ================= Hero 名字逐字入场 ================= */
 (function(){
@@ -680,68 +931,7 @@ const LANGS = [
   });
 })();
 
-/* ================= 项目卡片渲染 + 3D 倾斜 ================= */
-(function(){
-  const wrap=document.getElementById('cards');
-  PROJECTS.forEach((p,i)=>{
-    const d=document.createElement('div');
-    d.className='card reveal'; d.style.setProperty('--i', i%3);
-    d.style.setProperty('--lc', p.color);
-    d.innerHTML=`
-      <div class="glare"></div>
-      <div class="idx">${String(i+1).padStart(2,'0')}</div>
-      <h3><a href="${p.url}" target="_blank" data-hover>${p.name}</a></h3>
-      <p>${p.desc}</p>
-      <div class="meta">
-        <span class="lg">${p.lang}</span>
-        ${p.star?`<span class="st">★ ${p.star}</span>`:""}
-      </div>`;
-    wrap.appendChild(d);
-  });
-  if(matchMedia('(hover:hover)').matches){
-    wrap.querySelectorAll('.card').forEach(card=>{
-      card.addEventListener('mousemove',e=>{
-        const r=card.getBoundingClientRect();
-        const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
-        card.style.transition='box-shadow .35s';
-        card.style.transform=`rotateY(${(px-0.5)*14}deg) rotateX(${(0.5-py)*12}deg) translateZ(6px)`;
-        card.style.setProperty('--gx', px*100+'%');
-        card.style.setProperty('--gy', py*100+'%');
-      });
-      card.addEventListener('mouseleave',()=>{
-        card.style.transition='transform .6s cubic-bezier(.22,1,.36,1), box-shadow .35s';
-        card.style.transform='none';
-      });
-    });
-  }
-})();
-
-/* ================= 语言:条形 + 环形图 ================= */
-(function(){
-  const list=document.getElementById('langList');
-  LANGS.forEach(l=>{
-    const d=document.createElement('div');
-    d.className='lang'; d.style.setProperty('--lc', l.color);
-    d.innerHTML=`<span class="lname">${l.name}</span>
-      <div class="bar"><i data-w="${l.pct}"></i></div>
-      <span class="pct">${l.pct}%</span>`;
-    list.appendChild(d);
-  });
-  const svg=document.getElementById('donut');
-  const R=80, C=2*Math.PI*R; let acc=0;
-  const NS='http://www.w3.org/2000/svg';
-  LANGS.forEach(l=>{
-    const c=document.createElementNS(NS,'circle');
-    c.setAttribute('cx',100); c.setAttribute('cy',100); c.setAttribute('r',R);
-    c.setAttribute('stroke', l.color);
-    const len=l.pct/100*C;
-    c.setAttribute('stroke-dasharray', `0 ${C}`);
-    c.setAttribute('stroke-dashoffset', -acc/100*C);
-    c.dataset.target=`${len-1.5} ${C}`;
-    svg.appendChild(c);
-    acc+=l.pct;
-  });
-})();
+/* 项目卡片和语言图表的渲染已提升到数据模块,支持 GitHub API 自动刷新 */
 
 /* ================= 滚动观察:reveal / 计数 / 条形 / 环形 ================= */
 (function(){
@@ -768,6 +958,7 @@ const LANGS = [
       io.unobserve(e.target);
     });
   },{threshold:0.25});
+  revealObserver = io;
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 })();
 
