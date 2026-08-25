@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-24T02:58:28.185Z",
+  "updatedAt": "2026-08-25T02:54:11.572Z",
   "user": {
     "login": "LvienOeria",
     "public_repos": 25,
@@ -8,6 +8,18 @@
   },
   "repos": [
     {
+      "name": "dsh-desktop-launcher",
+      "full_name": "LvienOeria/dsh-desktop-launcher",
+      "html_url": "https://github.com/LvienOeria/dsh-desktop-launcher",
+      "description": "一个轻量的 dsh（DeepSeek Harness）插件：安装桌面双击启动器 —— macOS 上是带官方鲸鱼图标的 dsh.app，Linux 上是 .desktop 入口。零依赖，约 147 KB。（终端命令在独立的 dsh-launcher 包）",
+      "fork": false,
+      "language": "JavaScript",
+      "stargazers_count": 1,
+      "pushed_at": "2026-08-14T05:54:09Z",
+      "updated_at": "2026-08-24T19:07:25Z",
+      "created_at": "2026-08-14T05:23:22Z"
+    },
+    {
       "name": "LvienOeria.github.io",
       "full_name": "LvienOeria/LvienOeria.github.io",
       "html_url": "https://github.com/LvienOeria/LvienOeria.github.io",
@@ -15,8 +27,8 @@
       "fork": false,
       "language": "HTML",
       "stargazers_count": 0,
-      "pushed_at": "2026-08-23T02:57:47Z",
-      "updated_at": "2026-08-23T02:57:50Z",
+      "pushed_at": "2026-08-24T02:58:29Z",
+      "updated_at": "2026-08-24T02:58:40Z",
       "created_at": "2025-02-22T12:38:36Z"
     },
     {
@@ -66,18 +78,6 @@
       "pushed_at": "2026-08-14T05:54:27Z",
       "updated_at": "2026-08-15T00:59:10Z",
       "created_at": "2026-08-14T05:02:07Z"
-    },
-    {
-      "name": "dsh-desktop-launcher",
-      "full_name": "LvienOeria/dsh-desktop-launcher",
-      "html_url": "https://github.com/LvienOeria/dsh-desktop-launcher",
-      "description": "一个轻量的 dsh（DeepSeek Harness）插件：安装桌面双击启动器 —— macOS 上是带官方鲸鱼图标的 dsh.app，Linux 上是 .desktop 入口。零依赖，约 147 KB。（终端命令在独立的 dsh-launcher 包）",
-      "fork": false,
-      "language": "JavaScript",
-      "stargazers_count": 2,
-      "pushed_at": "2026-08-14T05:54:09Z",
-      "updated_at": "2026-08-15T00:59:10Z",
-      "created_at": "2026-08-14T05:23:22Z"
     },
     {
       "name": "gp",
